@@ -320,9 +320,17 @@ final class GroupStore: ObservableObject {
     private func mergeMembersAndExpenses(local: ExpenseGroup, remote: ExpenseGroup) -> ExpenseGroup {
         var merged = local.updatedAt >= remote.updatedAt ? local : remote
 
+        let olderMembers = local.updatedAt >= remote.updatedAt ? remote.members : local.members
+        let newerMembers = local.updatedAt >= remote.updatedAt ? local.members : remote.members
         let membersById = Dictionary(
-            (local.members + remote.members).map { ($0.id, $0) },
-            uniquingKeysWith: Self.mergedMember
+            (olderMembers + newerMembers).map { ($0.id, $0) },
+            uniquingKeysWith: { older, newer in
+                var merged = newer
+                if merged.peerDeviceId == nil {
+                    merged.peerDeviceId = older.peerDeviceId
+                }
+                return merged
+            }
         )
         merged.members = membersById.values.sorted {
             let nameOrder = $0.displayName.localizedCaseInsensitiveCompare($1.displayName)
@@ -357,14 +365,6 @@ final class GroupStore: ObservableObject {
             return $0.id.uuidString < $1.id.uuidString
         }
         merged.updatedAt = max(local.updatedAt, remote.updatedAt)
-        return merged
-    }
-
-    private static func mergedMember(_ current: GroupMember, _ incoming: GroupMember) -> GroupMember {
-        var merged = current
-        if merged.peerDeviceId == nil {
-            merged.peerDeviceId = incoming.peerDeviceId
-        }
         return merged
     }
 
