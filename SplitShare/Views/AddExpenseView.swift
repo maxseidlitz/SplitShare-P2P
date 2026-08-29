@@ -55,7 +55,7 @@ struct AddExpenseView: View {
     private var canSave: Bool {
         guard let amount, amount > 0,
               !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              let payerId,
+              payerId != nil,
               !selectedMemberIds.isEmpty else { return false }
 
         switch splitMode {
