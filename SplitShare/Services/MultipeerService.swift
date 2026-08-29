@@ -211,7 +211,7 @@ final class MultipeerService: NSObject, ObservableObject {
     private func shouldAutoInvite(_ peer: MCPeerID) -> Bool {
         guard isTrusted(peer), let peerDeviceId = deviceId(for: peer) else { return false }
         if pausedDeviceIds.contains(peerDeviceId) { return false }
-        return deviceId < peerDeviceId
+        return !isConnected(peer)
     }
 
     private func handleReceivedData(_ data: Data, from peer: MCPeerID) {

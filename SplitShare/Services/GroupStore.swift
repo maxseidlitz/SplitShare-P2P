@@ -325,7 +325,9 @@ final class GroupStore: ObservableObject {
             uniquingKeysWith: Self.mergedMember
         )
         merged.members = membersById.values.sorted {
-            $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+            let nameOrder = $0.displayName.localizedCaseInsensitiveCompare($1.displayName)
+            if nameOrder != .orderedSame { return nameOrder == .orderedAscending }
+            return $0.id.uuidString < $1.id.uuidString
         }
 
         let deleted = Set(local.deletedExpenseIds + remote.deletedExpenseIds)
@@ -350,7 +352,10 @@ final class GroupStore: ObservableObject {
         }
 
         merged.deletedExpenseIds = deleted.sorted { $0.uuidString < $1.uuidString }
-        merged.expenses = expensesById.values.sorted { $0.date > $1.date }
+        merged.expenses = expensesById.values.sorted {
+            if $0.date != $1.date { return $0.date > $1.date }
+            return $0.id.uuidString < $1.id.uuidString
+        }
         merged.updatedAt = max(local.updatedAt, remote.updatedAt)
         return merged
     }
@@ -359,9 +364,6 @@ final class GroupStore: ObservableObject {
         var merged = current
         if merged.peerDeviceId == nil {
             merged.peerDeviceId = incoming.peerDeviceId
-        }
-        if incoming.displayName != merged.displayName, incoming.peerDeviceId != nil || merged.peerDeviceId == nil {
-            merged.displayName = incoming.displayName
         }
         return merged
     }

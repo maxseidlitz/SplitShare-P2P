@@ -23,15 +23,17 @@ struct GroupsListView: View {
                         .buttonStyle(.borderedProminent)
                     }
                 } else {
-                    List(groupStore.groups) { group in
-                        NavigationLink(value: group.id) {
-                            GroupRowView(group: group)
+                    List {
+                        ForEach(groupStore.groups) { group in
+                            NavigationLink(value: group.id) {
+                                GroupRowView(group: group)
+                            }
                         }
-                    }
-                    .onDelete { offsets in
-                        let ids = offsets.map { groupStore.groups[$0].id }
-                        for id in ids {
-                            groupStore.deleteGroup(id)
+                        .onDelete { offsets in
+                            let ids = offsets.map { groupStore.groups[$0].id }
+                            for id in ids {
+                                groupStore.deleteGroup(id)
+                            }
                         }
                     }
                 }
