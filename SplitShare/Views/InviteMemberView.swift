@@ -1,5 +1,4 @@
 import SwiftUI
-import MultipeerConnectivity
 
 struct InviteMemberView: View {
     @Environment(\.dismiss) private var dismiss
@@ -8,43 +7,52 @@ struct InviteMemberView: View {
 
     let group: ExpenseGroup
 
-    @State private var manualName = ""
+    @State private var showingScanner = false
+    @State private var showingMyCode = false
+    @State private var errorMessage: String?
+    @State private var successName: String?
 
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    Text("Sende eine Gruppeneinladung an verbundene Geräte. Der Empfänger erhält die Gruppe automatisch per Bluetooth.")
+                    Text("Nur per QR-Code. Wer den Code nicht gescannt hat, sieht diese Gruppe nicht — auch nicht in Bluetooth-Reichweite.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
 
-                Section("Verbundene Geräte") {
-                    if peerService.connectedPeers.isEmpty {
-                        Text("Keine Geräte verbunden. Öffne den Tab „In der Nähe“ und halte zwei iPhones nah beieinander.")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(peerService.connectedPeers, id: \.displayName) { peer in
-                            Button {
-                                invite(peer: peer)
-                            } label: {
-                                Label("Einladen: \(peer.displayName)", systemImage: "paperplane.fill")
-                            }
-                        }
+                Section {
+                    Button {
+                        showingScanner = true
+                    } label: {
+                        Label("QR-Code der anderen Person scannen", systemImage: "qrcode.viewfinder")
+                    }
+
+                    Button {
+                        showingMyCode = true
+                    } label: {
+                        Label("Eigenen Code zeigen", systemImage: "qrcode")
                     }
                 }
 
-                Section("Manuell hinzufügen") {
-                    TextField("Name", text: $manualName)
-                    Button("Als Mitglied hinzufügen") {
-                        let member = GroupMember(displayName: manualName.trimmingCharacters(in: .whitespacesAndNewlines))
-                        groupStore.inviteMember(to: group.id, member: member)
-                        manualName = ""
-                        dismiss()
+                if let successName {
+                    Section {
+                        Label("\(successName) ist eingeladen. Beim nächsten Treffen per Bluetooth wird die Gruppe synchronisiert.", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
                     }
-                    .disabled(manualName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                } footer: {
-                    Text("Manuelle Mitglieder synchronisieren Ausgaben nicht automatisch – nutze Bluetooth-Einladungen für Live-Sync.")
+                }
+
+                if let errorMessage {
+                    Section {
+                        Text(errorMessage)
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                Section {
+                    Text("Die andere Person zeigt ihren Code unter Profil. Nach dem Scannen bleibt sie Mitglied, sobald ihr euch wieder in der Nähe seid.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
             .navigationTitle("Einladen")
@@ -54,14 +62,39 @@ struct InviteMemberView: View {
                     Button("Fertig") { dismiss() }
                 }
             }
+            .sheet(isPresented: $showingScanner) {
+                QRScannerView { raw in
+                    handleScan(raw)
+                }
+            }
+            .sheet(isPresented: $showingMyCode) {
+                NavigationStack {
+                    IdentityQRCodeView(payload: peerService.identityPayload)
+                        .navigationTitle("Dein Code")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Fertig") { showingMyCode = false }
+                            }
+                        }
+                }
+            }
         }
     }
 
-    private func invite(peer: MCPeerID) {
-        groupStore.sendGroupInvite(group, to: peer)
-        let member = GroupMember(displayName: peer.displayName, peerDeviceId: nil)
-        groupStore.inviteMember(to: group.id, member: member)
-        dismiss()
+    private func handleScan(_ raw: String) {
+        guard let payload = QRIdentity.decode(raw) else {
+            errorMessage = "Das ist kein SplitShare-Code."
+            successName = nil
+            return
+        }
+        if let error = groupStore.inviteByQR(payload, to: group.id) {
+            errorMessage = error
+            successName = nil
+        } else {
+            errorMessage = nil
+            successName = payload.displayName
+        }
     }
 }
 

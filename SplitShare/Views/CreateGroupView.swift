@@ -13,7 +13,7 @@ struct CreateGroupView: View {
                     TextField("Gruppenname", text: $name)
                         .textInputAutocapitalization(.words)
                 } footer: {
-                    Text("Du wirst automatisch als Mitglied hinzugefügt. Andere können per Bluetooth eingeladen werden.")
+                    Text("Du wirst automatisch als Mitglied hinzugefügt. Andere siehst du in der Gruppe erst nach QR-Code-Einladung.")
                 }
             }
             .navigationTitle("Neue Gruppe")

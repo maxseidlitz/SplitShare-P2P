@@ -6,6 +6,7 @@ import UIKit
 @MainActor
 final class MultipeerService: NSObject, ObservableObject {
     static let serviceType = "splitshare-p2p"
+    private static let peerIDKey = "splitshare.peerID"
 
     @Published private(set) var profile: PeerProfile
     @Published private(set) var connectedPeers: [MCPeerID] = []
@@ -14,40 +15,59 @@ final class MultipeerService: NSObject, ObservableObject {
     @Published private(set) var isBrowsing = false
     @Published var lastError: String?
 
+    let deviceId: String
+
     var onEnvelopeReceived: ((SyncEnvelope, MCPeerID) -> Void)?
     var onPeerConnected: ((MCPeerID) -> Void)?
 
-    private let deviceId: String
-    private let myPeerID: MCPeerID
-    private let session: MCSession
+    private var myPeerID: MCPeerID
+    private var session: MCSession
     private var advertiser: MCNearbyServiceAdvertiser?
     private var browser: MCNearbyServiceBrowser?
+    private var deviceIdByPeer: [MCPeerID: String] = [:]
+    private var trustedDeviceIds: Set<String> = []
+    private var pausedDeviceIds: Set<String> = []
 
     override init() {
         let storedDeviceId = UserDefaults.standard.string(forKey: "splitshare.deviceId") ?? UUID().uuidString
         UserDefaults.standard.set(storedDeviceId, forKey: "splitshare.deviceId")
         deviceId = storedDeviceId
 
+        let loadedProfile: PeerProfile
+        let createdNewProfile: Bool
         if let data = UserDefaults.standard.data(forKey: "splitshare.profile"),
            let savedProfile = try? JSONDecoder().decode(PeerProfile.self, from: data) {
-            profile = savedProfile
+            loadedProfile = savedProfile
+            createdNewProfile = false
         } else {
-            let defaultName = UIDevice.current.name
-            profile = PeerProfile(displayName: defaultName)
+            loadedProfile = PeerProfile(displayName: UIDevice.current.name)
+            createdNewProfile = true
         }
+        profile = loadedProfile
 
-        myPeerID = MCPeerID(displayName: profile.displayName)
+        myPeerID = Self.loadOrCreatePeerID(displayName: loadedProfile.displayName)
         session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .required)
         super.init()
         session.delegate = self
+        if createdNewProfile {
+            persistProfile()
+        }
+    }
+
+    var identityPayload: QRIdentity.Payload {
+        QRIdentity.payload(profileId: profile.id, deviceId: deviceId, displayName: profile.displayName)
     }
 
     func updateDisplayName(_ name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        let previous = profile.displayName
         profile.displayName = trimmed
         persistProfile()
-        broadcastProfile()
+        if previous != trimmed {
+            rebuildSession(displayName: trimmed)
+        }
+        broadcastProfile(to: session.connectedPeers.filter { isTrusted($0) })
     }
 
     func startNetworking() {
@@ -58,6 +78,33 @@ final class MultipeerService: NSObject, ObservableObject {
     func stopNetworking() {
         stopAdvertising()
         stopBrowsing()
+    }
+
+    func setTrustedDeviceIds(_ ids: Set<String>) {
+        trustedDeviceIds = ids.subtracting([deviceId])
+        connectToTrustedDiscoveredPeers()
+    }
+
+    func deviceId(for peer: MCPeerID) -> String? {
+        if let id = deviceIdByPeer[peer] { return id }
+        return deviceIdByPeer.first(where: { $0.key == peer || $0.key.displayName == peer.displayName })?.value
+    }
+
+    func rememberDeviceId(_ id: String, for peer: MCPeerID) {
+        deviceIdByPeer[peer] = id
+    }
+
+    func isTrusted(_ peer: MCPeerID) -> Bool {
+        guard let id = deviceId(for: peer) else { return false }
+        return trustedDeviceIds.contains(id)
+    }
+
+    func isConnected(_ peer: MCPeerID) -> Bool {
+        if session.connectedPeers.contains(peer) { return true }
+        if let id = deviceId(for: peer) {
+            return session.connectedPeers.contains { deviceId(for: $0) == id }
+        }
+        return false
     }
 
     func startAdvertising() {
@@ -96,12 +143,29 @@ final class MultipeerService: NSObject, ObservableObject {
     }
 
     func invite(_ peer: MCPeerID) {
+        if let id = deviceId(for: peer) {
+            pausedDeviceIds.remove(id)
+        }
+        sendInvite(peer)
+    }
+
+    private func sendInvite(_ peer: MCPeerID) {
         guard let browser else { return }
         browser.invitePeer(peer, to: session, withContext: nil, timeout: 20)
     }
 
     func disconnect(from peer: MCPeerID) {
-        session.cancelConnectPeer(peer)
+        if let id = deviceId(for: peer) {
+            pausedDeviceIds.insert(id)
+        }
+
+        if isConnected(peer) {
+            session.disconnect()
+            refreshConnectedPeers()
+            connectToTrustedDiscoveredPeers()
+        } else {
+            session.cancelConnectPeer(peer)
+        }
     }
 
     func send(_ envelope: SyncEnvelope, to peers: [MCPeerID]? = nil) {
@@ -116,14 +180,16 @@ final class MultipeerService: NSObject, ObservableObject {
         }
     }
 
-    func broadcastProfile() {
+    func broadcastProfile(to peers: [MCPeerID]? = nil) {
+        let targets = peers ?? session.connectedPeers.filter { isTrusted($0) }
+        guard !targets.isEmpty else { return }
         guard let payload = try? JSONEncoder().encode(ProfilePayload(profile: profile)) else { return }
         let envelope = SyncEnvelope(
             senderDeviceId: deviceId,
             type: .profile,
             payload: payload
         )
-        send(envelope)
+        send(envelope, to: targets)
     }
 
     private func persistProfile() {
@@ -136,9 +202,59 @@ final class MultipeerService: NSObject, ObservableObject {
         connectedPeers = session.connectedPeers
     }
 
+    private func connectToTrustedDiscoveredPeers() {
+        for peer in discoveredPeers where shouldAutoInvite(peer) && !isConnected(peer) {
+            sendInvite(peer)
+        }
+    }
+
+    private func shouldAutoInvite(_ peer: MCPeerID) -> Bool {
+        guard isTrusted(peer), let peerDeviceId = deviceId(for: peer) else { return false }
+        if pausedDeviceIds.contains(peerDeviceId) { return false }
+        return deviceId < peerDeviceId
+    }
+
     private func handleReceivedData(_ data: Data, from peer: MCPeerID) {
         guard let envelope = try? JSONDecoder().decode(SyncEnvelope.self, from: data) else { return }
+        rememberDeviceId(envelope.senderDeviceId, for: peer)
         onEnvelopeReceived?(envelope, peer)
+    }
+
+    private func rebuildSession(displayName: String) {
+        stopNetworking()
+        session.disconnect()
+        myPeerID = MCPeerID(displayName: Self.peerDisplayName(displayName))
+        Self.persistPeerID(myPeerID)
+        session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .required)
+        session.delegate = self
+        connectedPeers = []
+        startNetworking()
+    }
+
+    private static func loadOrCreatePeerID(displayName: String) -> MCPeerID {
+        let clipped = peerDisplayName(displayName)
+        if let data = UserDefaults.standard.data(forKey: peerIDKey),
+           let stored = try? NSKeyedUnarchiver.unarchivedObject(ofClass: MCPeerID.self, from: data),
+           stored.displayName == clipped {
+            return stored
+        }
+        let peerID = MCPeerID(displayName: clipped)
+        persistPeerID(peerID)
+        return peerID
+    }
+
+    private static func persistPeerID(_ peerID: MCPeerID) {
+        if let data = try? NSKeyedArchiver.archivedData(withRootObject: peerID, requiringSecureCoding: true) {
+            UserDefaults.standard.set(data, forKey: peerIDKey)
+        }
+    }
+
+    private static func peerDisplayName(_ name: String) -> String {
+        var clipped = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        while clipped.utf8.count > 63, !clipped.isEmpty {
+            clipped.removeLast()
+        }
+        return clipped.isEmpty ? "SplitShare" : clipped
     }
 }
 
@@ -148,7 +264,9 @@ extension MultipeerService: MCSessionDelegate {
             refreshConnectedPeers()
             if state == .connected {
                 onPeerConnected?(peerID)
-                broadcastProfile()
+                if isTrusted(peerID) {
+                    broadcastProfile(to: [peerID])
+                }
             }
         }
     }
@@ -184,16 +302,21 @@ extension MultipeerService: MCNearbyServiceAdvertiserDelegate {
 extension MultipeerService: MCNearbyServiceBrowserDelegate {
     nonisolated func browser(_ browser: MCNearbyServiceBrowser, foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String: String]?) {
         Task { @MainActor in
-            if !discoveredPeers.contains(where: { $0.displayName == peerID.displayName }) {
+            if let discoveredId = info?["deviceId"] {
+                deviceIdByPeer[peerID] = discoveredId
+            }
+            if !discoveredPeers.contains(peerID) {
                 discoveredPeers.append(peerID)
             }
-            browser.invitePeer(peerID, to: session, withContext: nil, timeout: 20)
+            if shouldAutoInvite(peerID) {
+                browser.invitePeer(peerID, to: session, withContext: nil, timeout: 20)
+            }
         }
     }
 
     nonisolated func browser(_ browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
         Task { @MainActor in
-            discoveredPeers.removeAll { $0.displayName == peerID.displayName }
+            discoveredPeers.removeAll { $0 == peerID }
         }
     }
 

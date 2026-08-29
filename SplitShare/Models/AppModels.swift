@@ -36,6 +36,7 @@ struct Expense: Codable, Equatable, Identifiable, Hashable {
     var splits: [ExpenseSplit]
     var date: Date
     var createdAt: Date
+    var updatedAt: Date
 
     init(
         id: UUID = UUID(),
@@ -44,7 +45,8 @@ struct Expense: Codable, Equatable, Identifiable, Hashable {
         payerId: UUID,
         splits: [ExpenseSplit],
         date: Date = Date(),
-        createdAt: Date = Date()
+        createdAt: Date = Date(),
+        updatedAt: Date? = nil
     ) {
         self.id = id
         self.title = title
@@ -53,6 +55,19 @@ struct Expense: Codable, Equatable, Identifiable, Hashable {
         self.splits = splits
         self.date = date
         self.createdAt = createdAt
+        self.updatedAt = updatedAt ?? createdAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        amount = try container.decode(Decimal.self, forKey: .amount)
+        payerId = try container.decode(UUID.self, forKey: .payerId)
+        splits = try container.decode([ExpenseSplit].self, forKey: .splits)
+        date = try container.decode(Date.self, forKey: .date)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? createdAt
     }
 }
 
@@ -61,6 +76,7 @@ struct ExpenseGroup: Codable, Equatable, Identifiable, Hashable {
     var name: String
     var members: [GroupMember]
     var expenses: [Expense]
+    var deletedExpenseIds: [UUID]
     var createdAt: Date
     var updatedAt: Date
 
@@ -69,6 +85,7 @@ struct ExpenseGroup: Codable, Equatable, Identifiable, Hashable {
         name: String,
         members: [GroupMember],
         expenses: [Expense] = [],
+        deletedExpenseIds: [UUID] = [],
         createdAt: Date = Date(),
         updatedAt: Date = Date()
     ) {
@@ -76,8 +93,20 @@ struct ExpenseGroup: Codable, Equatable, Identifiable, Hashable {
         self.name = name
         self.members = members
         self.expenses = expenses
+        self.deletedExpenseIds = deletedExpenseIds
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        members = try container.decode([GroupMember].self, forKey: .members)
+        expenses = try container.decode([Expense].self, forKey: .expenses)
+        deletedExpenseIds = try container.decodeIfPresent([UUID].self, forKey: .deletedExpenseIds) ?? []
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
     }
 
     mutating func touch() {
@@ -114,6 +143,17 @@ struct Settlement: Identifiable, Hashable {
     let amount: Decimal
 
     var id: String { "\(from.id)-\(to.id)-\(amount)" }
+}
+
+struct RawDebt: Identifiable, Hashable {
+    let expenseId: UUID
+    let expenseTitle: String
+    let expenseDate: Date
+    let from: GroupMember
+    let to: GroupMember
+    let amount: Decimal
+
+    var id: String { "\(expenseId.uuidString)-\(from.id.uuidString)-\(to.id.uuidString)" }
 }
 
 enum SyncMessageType: String, Codable {
