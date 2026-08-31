@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SplitShare — Gemeinsame Ausgaben. Ohne Internet.</title>
+    <meta
+      name="description"
+      content="SplitShare ist die Offline-Alternative zu Splitwise. Gruppen, Rechnungen und Salden synchronisieren per Bluetooth — direkt von iPhone zu iPhone."
+    />
+    <link rel="icon" type="image/png" href="/assets/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/favicon.png" />
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <div class="glow" aria-hidden="true"></div>
+
+    <header class="nav">
+      <a class="brand" href="#top">
+        <img src="/assets/logo.png" alt="" width="36" height="36" />
+        <span>SplitShare</span>
+      </a>
+      <a class="nav-cta" href="#waitlist">Waitlist</a>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Bald auf dem iPhone</p>
+          <h1>Gemeinsame Ausgaben.<br /><em>Ohne Netz. Ohne Cloud.</em></h1>
+          <p class="lead">
+            SplitShare ist Splitwise, das nie online sein muss. Gruppen, Rechnungen
+            und Salden wandern per Bluetooth direkt von iPhone zu iPhone.
+          </p>
+
+          <div class="meter" id="meter" aria-live="polite">
+            <div class="meter-live">
+              <span class="pulse"></span>
+              Live
+            </div>
+            <div class="digits" id="digits" aria-label="0 Personen auf der Waitlist">
+              <span>0</span><span>0</span><span>0</span><span>0</span>
+            </div>
+            <p class="meter-label">Leute sichern sich schon ihren Platz</p>
+          </div>
+
+          <form class="waitlist" id="waitlist-form" novalidate>
+            <label class="sr-only" for="email">E-Mail-Adresse</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              inputmode="email"
+              placeholder="deine@mail.de"
+              required
+            />
+            <button type="submit">Platz sichern</button>
+          </form>
+          <p class="form-note" id="form-note">
+            Nur die Mail. Nur zum Launch. Kein Spam.
+          </p>
+        </div>
+
+        <div class="hero-visual">
+          <div class="phone" aria-hidden="true">
+            <div class="phone-inner">
+              <div class="island"></div>
+              <div class="status">
+                <span>9:41</span>
+                <span>SplitShare</span>
+              </div>
+              <div class="app-screen">
+                <p class="app-title">SplitShare</p>
+                <article class="group-card">
+                  <strong>Urlaub Italien</strong>
+                  <span>4 Mitglieder · 8 Ausgaben</span>
+                </article>
+                <article class="group-card">
+                  <strong>WG Küche</strong>
+                  <span>3 Mitglieder · 12 Ausgaben</span>
+                </article>
+                <article class="group-card accent">
+                  <strong>Festival-Crew</strong>
+                  <span>6 Mitglieder · alles ausgeglichen</span>
+                </article>
+              </div>
+              <div class="tabbar">
+                <span class="active">Gruppen</span>
+                <span>In der Nähe</span>
+                <span>Profil</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="features" id="features">
+        <p class="eyebrow">Was die App kann</p>
+        <h2>Klein, klar, komplett offline.</h2>
+        <div class="grid">
+          <article>
+            <span class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0ZM4 19a6 6 0 0 1 16 0"/></svg>
+            </span>
+            <h3>Gruppen in Sekunden</h3>
+            <p>Urlaub, WG, Festival. Eine Gruppe anlegen — du bist sofort drin.</p>
+          </article>
+          <article>
+            <span class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 12c3-5 11-5 14 0M8 12a4 4 0 0 1 8 0M12 12.5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1Z"/></svg>
+            </span>
+            <h3>Einladen per Bluetooth</h3>
+            <p>Zwei iPhones nah zusammenhalten. Die Einladung fliegt rüber — ohne Internet.</p>
+          </article>
+          <article>
+            <span class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M7 8h10M7 12h6M6 4h9l3 3v13H6z"/></svg>
+            </span>
+            <h3>Splitten, wie ihr wollt</h3>
+            <p>Gleichmäßig, exakt oder prozentual. Pizza, Airbnb, Tankfüllung.</p>
+          </article>
+          <article>
+            <span class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 12h6l2-6 3 12 2-6h3"/></svg>
+            </span>
+            <h3>Salden, die sich ausgleichen</h3>
+            <p>Wer wem was schuldet — plus den kürzesten Weg, wieder quitt zu sein.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="steps" id="how">
+        <p class="eyebrow">So funktioniert’s</p>
+        <h2>Drei Schritte. Kein Account im Netz.</h2>
+        <ol>
+          <li>
+            <strong>Gruppe anlegen</strong>
+            <span>Name, fertig. Dein iPhone ist der Speicher.</span>
+          </li>
+          <li>
+            <strong>Geräte verbinden</strong>
+            <span>Bluetooth erkennt Freunde in der Nähe und synct die Gruppe.</span>
+          </li>
+          <li>
+            <strong>Ausgaben teilen</strong>
+            <span>Jeder trägt ein. Alle sehen denselben Stand — auch im Funkloch.</span>
+          </li>
+        </ol>
+      </section>
+
+      <section class="cta" id="waitlist">
+        <img class="cta-logo" src="/assets/logo.png" alt="SplitShare Logo" width="72" height="72" />
+        <h2>Sei dabei, wenn wir live gehen.</h2>
+        <p>Die ersten auf der Liste bekommen SplitShare zuerst aufs iPhone.</p>
+        <form class="waitlist" id="waitlist-form-bottom" novalidate>
+          <label class="sr-only" for="email-bottom">E-Mail-Adresse</label>
+          <input
+            id="email-bottom"
+            name="email"
+            type="email"
+            autocomplete="email"
+            inputmode="email"
+            placeholder="deine@mail.de"
+            required
+          />
+          <button type="submit">Auf die Waitlist</button>
+        </form>
+        <p class="form-note" id="form-note-bottom">Wir schreiben dir nur einmal — zum Launch.</p>
+      </section>
+    </main>
+
+    <footer>
+      <div>
+        <img src="/assets/logo.png" alt="" width="28" height="28" />
+        <strong>SplitShare</strong>
+      </div>
+      <p>Peer-to-Peer. Privat. Offline.</p>
+    </footer>
+
+    <script src="/js/app.js"></script>
+  </body>
+</html>
