@@ -66,15 +66,18 @@ struct GroupDetailView: View {
         .navigationTitle(currentGroup.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if !isArchived {
+                    Button {
+                        showingAddExpense = true
+                    } label: {
+                        Image(systemName: "plus.circle")
+                    }
+                    .accessibilityLabel("Ausgabe hinzufügen")
+                }
+
                 Menu {
                     if !isArchived {
-                        Button {
-                            showingAddExpense = true
-                        } label: {
-                            Label("Ausgabe hinzufügen", systemImage: "plus")
-                        }
-
                         Button {
                             showingInvite = true
                         } label: {
@@ -106,6 +109,7 @@ struct GroupDetailView: View {
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
+                .accessibilityLabel("Gruppenaktionen")
             }
         }
         .sheet(isPresented: $showingAddExpense) {

@@ -23,7 +23,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>SplitShare nutzt die Kamera, um den QR-Code einer Person zu scannen und sie in eine Gruppe einzuladen.</string>
+	<string>SplitShare nutzt die Kamera, um QR-Codes zu scannen und Kassenzettel zu fotografieren.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SplitShare liest ein Foto aus der Mediathek, um Titel, Summe und Datum eines Kassenzettels vorzuschlagen. Das Bild bleibt auf diesem iPhone.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>SplitShare nutzt Bluetooth, um Gruppen und Ausgaben direkt mit anderen iPhones zu synchronisieren – ohne Internet.</string>
 	<key>NSLocalNetworkUsageDescription</key>

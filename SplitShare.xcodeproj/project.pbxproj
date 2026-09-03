@@ -24,6 +24,8 @@
 		A1000001000000000000000F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000F /* Assets.xcassets */; };
 		A10000010000000000000011 /* QRIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* QRIdentity.swift */; };
 		A10000010000000000000012 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000012 /* QRScannerView.swift */; };
+		A10000010000000000000013 /* ReceiptOCR.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000013 /* ReceiptOCR.swift */; };
+		A10000010000000000000014 /* ReceiptCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000014 /* ReceiptCaptureView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -45,6 +47,8 @@
 		A20000010000000000000010 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A20000010000000000000011 /* QRIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRIdentity.swift; sourceTree = "<group>"; };
 		A20000010000000000000012 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
+		A20000010000000000000013 /* ReceiptOCR.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptOCR.swift; sourceTree = "<group>"; };
+		A20000010000000000000014 /* ReceiptCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptCaptureView.swift; sourceTree = "<group>"; };
 		A30000010000000000000001 /* SplitShare.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SplitShare.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -103,6 +107,7 @@
 				A20000010000000000000004 /* MultipeerService.swift */,
 				A20000010000000000000005 /* GroupStore.swift */,
 				A20000010000000000000011 /* QRIdentity.swift */,
+				A20000010000000000000013 /* ReceiptOCR.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -120,6 +125,7 @@
 				A2000001000000000000000D /* InviteMemberView.swift */,
 				A2000001000000000000000E /* ProfileView.swift */,
 				A20000010000000000000012 /* QRScannerView.swift */,
+				A20000010000000000000014 /* ReceiptCaptureView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -209,6 +215,8 @@
 				A1000001000000000000000E /* ProfileView.swift in Sources */,
 				A10000010000000000000011 /* QRIdentity.swift in Sources */,
 				A10000010000000000000012 /* QRScannerView.swift in Sources */,
+				A10000010000000000000013 /* ReceiptOCR.swift in Sources */,
+				A10000010000000000000014 /* ReceiptCaptureView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

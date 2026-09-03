@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct AddExpenseView: View {
     @Environment(\.dismiss) private var dismiss
@@ -16,6 +17,10 @@ struct AddExpenseView: View {
     @State private var exactAmounts: [UUID: String]
     @State private var percentages: [UUID: String]
     @State private var date: Date
+    @State private var showingScanSource = false
+    @State private var captureSource: ReceiptCaptureSource?
+    @State private var scanHint: String?
+    @State private var scanHintIsError = false
 
     private var isEditing: Bool { existingExpense != nil }
 
@@ -86,6 +91,23 @@ struct AddExpenseView: View {
     var body: some View {
         NavigationStack {
             Form {
+                if !isEditing {
+                    Section {
+                        Button {
+                            showingScanSource = true
+                        } label: {
+                            Label("Zettel scannen", systemImage: "doc.text.viewfinder")
+                        }
+                    } footer: {
+                        if let scanHint {
+                            Text(scanHint)
+                                .foregroundStyle(scanHintIsError ? Color.red : Color.secondary)
+                        } else {
+                            Text("Foto oder Mediathek. Titel, Summe und Datum werden vorgeschlagen — du prüfst vor dem Speichern.")
+                        }
+                    }
+                }
+
                 Section("Details") {
                     TextField("Beschreibung", text: $title)
                     TextField("Betrag", text: $amountText)
@@ -194,6 +216,49 @@ struct AddExpenseView: View {
                 payerId = group.members.first(where: { $0.id == peerService.profile.id })?.id ?? selectableMembers.first?.id
                 selectedMemberIds = Set(selectableMembers.map(\.id))
             }
+            .confirmationDialog("Zettel scannen", isPresented: $showingScanSource, titleVisibility: .visible) {
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                    Button("Foto aufnehmen") {
+                        captureSource = .camera
+                    }
+                }
+                Button("Aus Mediathek") {
+                    captureSource = .library
+                }
+                Button("Abbrechen", role: .cancel) {}
+            }
+            .fullScreenCover(item: $captureSource) { source in
+                ReceiptCaptureView(source: source) { result in
+                    applyScan(result)
+                }
+            }
+        }
+    }
+
+    private func applyScan(_ result: Result<ReceiptOCR.Suggestion, ReceiptOCR.Failure>) {
+        switch result {
+        case .success(let suggestion):
+            if suggestion.hasAnyValue {
+                if let scannedTitle = suggestion.title, !scannedTitle.isEmpty {
+                    title = scannedTitle
+                }
+                if let scannedAmount = suggestion.amount {
+                    amountText = Self.decimalString(scannedAmount)
+                }
+                if let scannedDate = suggestion.date {
+                    date = scannedDate
+                }
+                scanHintIsError = false
+                scanHint = "Vorschlag aus Zettel — bitte prüfen"
+            } else {
+                scanHintIsError = true
+                scanHint = "Zettel nicht eindeutig gelesen — bitte selbst eintragen"
+            }
+        case .failure(.cancelled):
+            break
+        case .failure:
+            scanHintIsError = true
+            scanHint = "Zettel nicht eindeutig gelesen — bitte selbst eintragen"
         }
     }
 
