@@ -111,6 +111,3 @@ E-Mails landen in `website/data/waitlist.json` (nicht im Git). Details: [`websit
     └── README.md
 ```
 
-## Lizenz
-
-MIT
