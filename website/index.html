@@ -20,13 +20,15 @@
   </head>
   <body>
     <div class="glow" aria-hidden="true"></div>
+    <div class="glow glow-2" aria-hidden="true"></div>
 
     <header class="nav">
       <a class="brand" href="#top">
-        <img src="/assets/logo.svg" alt="" width="40" height="40" />
+        <img src="/assets/logo.png" alt="" width="40" height="40" />
         <span>SplitShare</span>
       </a>
       <nav class="nav-links">
+        <a href="#how">So geht’s</a>
         <a href="#privacy">Privatsphäre</a>
         <a class="nav-cta" href="#waitlist">Waitlist</a>
       </nav>
@@ -72,48 +74,122 @@
           </p>
         </div>
 
-        <div class="hero-visual">
-          <div class="phone" aria-hidden="true">
-            <div class="phone-inner">
-              <div class="island"></div>
-              <div class="status">
-                <span>9:41</span>
-                <span>SplitShare</span>
-              </div>
-              <div class="app-screen">
-                <div class="app-header">
-                  <img src="/assets/logo.svg" alt="" width="36" height="36" />
-                  <div>
-                    <p class="app-title">SplitShare</p>
-                    <p class="app-offline">Offline · Bluetooth</p>
-                  </div>
+        <div class="sync-demo" id="sync-demo">
+          <p class="sr-only">
+            Zwei iPhones synchronisieren eine Ausgabe per Bluetooth — ohne Internet.
+            Max trägt Pizza ein, die Geräte rücken zusammen, Luisa sieht denselben Stand.
+          </p>
+          <p class="eyebrow sync-kicker">Ohne Cloud. Gerät zu Gerät.</p>
+          <div class="sync-captions" aria-hidden="true">
+            <span class="sync-caption cap-1">Max trägt ein.</span>
+            <span class="sync-caption cap-2">Bluetooth. Kein Internet.</span>
+            <span class="sync-caption cap-3">Luisa hat denselben Stand.</span>
+          </div>
+          <div class="sync-stage" aria-hidden="true">
+            <span class="orbit-ring r1"></span>
+            <span class="orbit-ring r2"></span>
+            <span class="orbit-ring r3"></span>
+
+            <div class="phone phone-sm phone-a">
+              <div class="phone-inner">
+                <div class="island"></div>
+                <div class="status">
+                  <span>9:41</span>
+                  <span>Max</span>
                 </div>
-                <article class="group-card">
-                  <strong>Urlaub Italien</strong>
-                  <span>4 Mitglieder · 8 Ausgaben</span>
-                </article>
-                <article class="group-card">
-                  <strong>WG Küche</strong>
-                  <span>3 Mitglieder · 12 Ausgaben</span>
-                </article>
-                <article class="group-card accent">
-                  <strong>Festival-Crew</strong>
-                  <span>6 Mitglieder · alles ausgeglichen</span>
-                </article>
+                <div class="app-screen">
+                  <div class="app-header">
+                    <img src="/assets/logo.png" alt="" width="24" height="24" />
+                    <div>
+                      <p class="app-title">Festival-Crew</p>
+                      <p class="app-offline">Offline · Bluetooth</p>
+                    </div>
+                  </div>
+                  <article class="group-card accent">
+                    <strong>Pizza</strong>
+                    <span>24,00 € · Max</span>
+                  </article>
+                  <p class="sync-badge">Synchronisiert</p>
+                </div>
+                <div class="tabbar">
+                  <span class="active">Gruppen</span>
+                  <span>In der Nähe</span>
+                  <span>Profil</span>
+                </div>
               </div>
-              <div class="tabbar">
-                <span class="active">Gruppen</span>
-                <span>In der Nähe</span>
-                <span>Profil</span>
+            </div>
+
+            <div class="sync-beam">
+              <span class="sync-wave w1"></span>
+              <span class="sync-wave w2"></span>
+              <span class="sync-wave w3"></span>
+              <span class="sync-dot"></span>
+              <article class="fly-card">
+                <strong>Pizza</strong>
+                <span>24,00 €</span>
+              </article>
+            </div>
+
+            <div class="phone phone-sm phone-b">
+              <div class="phone-inner">
+                <div class="island"></div>
+                <div class="status">
+                  <span>9:41</span>
+                  <span>Luisa</span>
+                </div>
+                <div class="app-screen">
+                  <div class="app-header">
+                    <img src="/assets/logo.png" alt="" width="24" height="24" />
+                    <div>
+                      <p class="app-title">Festival-Crew</p>
+                      <p class="app-offline">Offline · Bluetooth</p>
+                    </div>
+                  </div>
+                  <div class="sync-slot">
+                    <article class="group-card wait-card">
+                      <strong>Wartet auf Sync</strong>
+                      <span>Keine neuen Ausgaben</span>
+                    </article>
+                    <article class="group-card accent arrive-card">
+                      <strong>Pizza</strong>
+                      <span>24,00 € · Max</span>
+                    </article>
+                  </div>
+                  <p class="sync-badge">Synchronisiert</p>
+                </div>
+                <div class="tabbar">
+                  <span class="active">Gruppen</span>
+                  <span>In der Nähe</span>
+                  <span>Profil</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
+      <section class="steps" id="how">
+        <p class="eyebrow">So funktioniert’s</p>
+        <h2>Drei Schritte. Ohne Internet.</h2>
+        <ol>
+          <li>
+            <strong>Gruppe anlegen</strong>
+            <span>Name, fertig. Dein iPhone ist der Speicher.</span>
+          </li>
+          <li>
+            <strong>Geräte verbinden</strong>
+            <span>Bluetooth erkennt Freunde in der Nähe und synct die Gruppe.</span>
+          </li>
+          <li>
+            <strong>Ausgaben teilen</strong>
+            <span>Jeder trägt ein. Alle sehen denselben Stand — auch im Funkloch.</span>
+          </li>
+        </ol>
+      </section>
+
       <section class="privacy" id="privacy">
         <div class="privacy-brand">
-          <img src="/assets/logo.svg" alt="SplitShare Logo" width="88" height="88" />
+          <img src="/assets/logo.png" alt="SplitShare Logo" width="88" height="88" />
           <p class="eyebrow">Privatsphäre</p>
           <h2>Deine Daten verlassen das Gerät nicht.</h2>
           <p>
@@ -172,115 +248,8 @@
         </div>
       </section>
 
-      <section class="steps" id="how">
-        <p class="eyebrow">So funktioniert’s</p>
-        <h2>Drei Schritte. Ohne Internet.</h2>
-
-        <div class="sync-demo is-paused" id="sync-demo">
-          <p class="sr-only">
-            Zwei iPhones synchronisieren eine Ausgabe per Bluetooth — ohne Internet.
-            Max trägt Pizza ein, die Geräte rücken zusammen, Lea sieht denselben Stand.
-          </p>
-          <div class="sync-captions" aria-hidden="true">
-            <span class="sync-caption cap-1">Max trägt ein.</span>
-            <span class="sync-caption cap-2">Bluetooth. Kein Internet.</span>
-            <span class="sync-caption cap-3">Lea hat denselben Stand.</span>
-          </div>
-          <div class="sync-stage" aria-hidden="true">
-            <div class="phone phone-sm phone-a">
-              <div class="phone-inner">
-                <div class="island"></div>
-                <div class="status">
-                  <span>9:41</span>
-                  <span>Max</span>
-                </div>
-                <div class="app-screen">
-                  <div class="app-header">
-                    <img src="/assets/logo.svg" alt="" width="24" height="24" />
-                    <div>
-                      <p class="app-title">Festival-Crew</p>
-                      <p class="app-offline">Offline · Bluetooth</p>
-                    </div>
-                  </div>
-                  <article class="group-card accent">
-                    <strong>Pizza</strong>
-                    <span>24,00 € · Max</span>
-                  </article>
-                  <p class="sync-badge">Synchronisiert</p>
-                </div>
-                <div class="tabbar">
-                  <span class="active">Gruppen</span>
-                  <span>In der Nähe</span>
-                  <span>Profil</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="sync-beam">
-              <span class="sync-wave w1"></span>
-              <span class="sync-wave w2"></span>
-              <span class="sync-wave w3"></span>
-              <article class="fly-card">
-                <strong>Pizza</strong>
-                <span>24,00 €</span>
-              </article>
-            </div>
-
-            <div class="phone phone-sm phone-b">
-              <div class="phone-inner">
-                <div class="island"></div>
-                <div class="status">
-                  <span>9:41</span>
-                  <span>Lea</span>
-                </div>
-                <div class="app-screen">
-                  <div class="app-header">
-                    <img src="/assets/logo.svg" alt="" width="24" height="24" />
-                    <div>
-                      <p class="app-title">Festival-Crew</p>
-                      <p class="app-offline">Offline · Bluetooth</p>
-                    </div>
-                  </div>
-                  <div class="sync-slot">
-                    <article class="group-card wait-card">
-                      <strong>Wartet auf Sync</strong>
-                      <span>Keine neuen Ausgaben</span>
-                    </article>
-                    <article class="group-card accent arrive-card">
-                      <strong>Pizza</strong>
-                      <span>24,00 € · Max</span>
-                    </article>
-                  </div>
-                  <p class="sync-badge">Synchronisiert</p>
-                </div>
-                <div class="tabbar">
-                  <span class="active">Gruppen</span>
-                  <span>In der Nähe</span>
-                  <span>Profil</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <ol>
-          <li>
-            <strong>Gruppe anlegen</strong>
-            <span>Name, fertig. Dein iPhone ist der Speicher.</span>
-          </li>
-          <li>
-            <strong>Geräte verbinden</strong>
-            <span>Bluetooth erkennt Freunde in der Nähe und synct die Gruppe.</span>
-          </li>
-          <li>
-            <strong>Ausgaben teilen</strong>
-            <span>Jeder trägt ein. Alle sehen denselben Stand — auch im Funkloch.</span>
-          </li>
-        </ol>
-      </section>
-
       <section class="cta" id="waitlist">
-        <img class="cta-logo" src="/assets/logo.svg" alt="SplitShare Logo" width="72" height="72" />
+        <img class="cta-logo" src="/assets/logo.png" alt="SplitShare Logo" width="72" height="72" />
         <h2>Sei dabei, wenn wir live gehen.</h2>
         <p>Die ersten auf der Liste bekommen SplitShare zuerst aufs iPhone.</p>
         <form class="waitlist" id="waitlist-form-bottom" novalidate>
@@ -302,7 +271,7 @@
 
     <footer>
       <div>
-        <img src="/assets/logo.svg" alt="" width="28" height="28" />
+        <img src="/assets/logo.png" alt="" width="28" height="28" />
         <strong>SplitShare</strong>
       </div>
       <p>Nie online. Keine Cloud. Maximale Privatsphäre.</p>

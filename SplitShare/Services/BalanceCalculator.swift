@@ -105,6 +105,26 @@ enum BalanceCalculator {
         }
     }
 
+    static func isSettled(_ value: Decimal) -> Bool {
+        abs(value) < Decimal(string: "0.01")!
+    }
+
+    static func netBalance(for memberId: UUID, in group: ExpenseGroup) -> Decimal {
+        memberBalances(for: group).first { $0.member.id == memberId }?.netBalance ?? 0
+    }
+
+    static func hasOpenBalances(_ group: ExpenseGroup) -> Bool {
+        memberBalances(for: group).contains { !isSettled($0.netBalance) }
+    }
+
+    static func owesMoney(_ memberId: UUID, in group: ExpenseGroup) -> Bool {
+        netBalance(for: memberId, in: group) <= Decimal(string: "-0.01")!
+    }
+
+    static func isOwedMoney(_ memberId: UUID, in group: ExpenseGroup) -> Bool {
+        netBalance(for: memberId, in: group) >= Decimal(string: "0.01")!
+    }
+
     static func percentageSplits(amount: Decimal, percentages: [UUID: Decimal]) -> [ExpenseSplit] {
         let memberIds = Array(percentages.keys)
         guard !memberIds.isEmpty else { return [] }

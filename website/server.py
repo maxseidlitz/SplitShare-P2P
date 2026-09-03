@@ -18,7 +18,7 @@ DATA_FILE = ROOT / "data" / "waitlist.json"
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 LOCK = threading.Lock()
 HOST = "0.0.0.0"
-PORT = 8080
+PORT = 8787
 
 
 def utc_now() -> str:

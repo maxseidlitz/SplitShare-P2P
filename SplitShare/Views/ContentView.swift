@@ -1,24 +1,56 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject private var groupStore: GroupStore
+    @State private var selectedTab = 0
+
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             GroupsListView()
                 .tabItem {
                     Label("Gruppen", systemImage: "person.3.fill")
                 }
+                .tag(0)
 
             NearbyPeersView()
                 .tabItem {
                     Label("In der Nähe", systemImage: "dot.radiowaves.left.and.right")
                 }
+                .tag(1)
 
             ProfileView()
                 .tabItem {
                     Label("Profil", systemImage: "person.circle.fill")
                 }
+                .tag(2)
         }
         .tint(.teal)
+        .onChange(of: groupStore.pendingOpenGroupId) { _, newValue in
+            if newValue != nil {
+                selectedTab = 0
+            }
+        }
+        .alert(
+            groupStore.presentedNotice?.title ?? "",
+            isPresented: noticePresented
+        ) {
+            Button("OK") {
+                groupStore.consumePresentedNotice()
+            }
+        } message: {
+            Text(groupStore.presentedNotice?.message ?? "")
+        }
+    }
+
+    private var noticePresented: Binding<Bool> {
+        Binding(
+            get: { groupStore.presentedNotice != nil },
+            set: { isPresented in
+                if !isPresented {
+                    groupStore.consumePresentedNotice()
+                }
+            }
+        )
     }
 }
 

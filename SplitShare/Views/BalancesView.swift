@@ -16,8 +16,13 @@ private enum DebtDisplayMode: String, CaseIterable, Identifiable {
 
 struct BalancesView: View {
     let group: ExpenseGroup
+    var isReadOnly = false
+
+    @EnvironmentObject private var groupStore: GroupStore
+    @EnvironmentObject private var peerService: MultipeerService
 
     @State private var displayMode: DebtDisplayMode = .simplified
+    @State private var settleMessage: String?
 
     private var balances: [MemberBalance] {
         BalanceCalculator.memberBalances(for: group)
@@ -36,6 +41,10 @@ struct BalancesView: View {
         .sorted { $0.date > $1.date }
     }
 
+    private var iOwe: Bool {
+        BalanceCalculator.owesMoney(peerService.profile.id, in: group)
+    }
+
     var body: some View {
         List {
             Section {
@@ -45,6 +54,18 @@ struct BalancesView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+            }
+
+            if iOwe && !isReadOnly {
+                Section {
+                    Button {
+                        settleMessage = groupStore.markMyDebtsSettled(in: group.id)
+                    } label: {
+                        Label("Meine Schulden als bezahlt markieren", systemImage: "checkmark.circle")
+                    }
+                } footer: {
+                    Text("Setzt deine offenen Schulden auf 0, als hättest du sie bar zurückgezahlt.")
+                }
             }
 
             Section("Salden") {
@@ -65,6 +86,14 @@ struct BalancesView: View {
             case .perExpense:
                 perExpenseSections
             }
+        }
+        .alert("Hinweis", isPresented: Binding(
+            get: { settleMessage != nil },
+            set: { if !$0 { settleMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { settleMessage = nil }
+        } message: {
+            Text(settleMessage ?? "")
         }
     }
 
@@ -165,4 +194,6 @@ struct BalancesView: View {
             expenses: []
         )
     )
+    .environmentObject(GroupStore())
+    .environmentObject(MultipeerService())
 }

@@ -74,26 +74,32 @@ struct Expense: Codable, Equatable, Identifiable, Hashable {
 struct ExpenseGroup: Codable, Equatable, Identifiable, Hashable {
     let id: UUID
     var name: String
+    var adminId: UUID
     var members: [GroupMember]
     var expenses: [Expense]
     var deletedExpenseIds: [UUID]
+    var leftMemberIds: [UUID]
     var createdAt: Date
     var updatedAt: Date
 
     init(
         id: UUID = UUID(),
         name: String,
+        adminId: UUID? = nil,
         members: [GroupMember],
         expenses: [Expense] = [],
         deletedExpenseIds: [UUID] = [],
+        leftMemberIds: [UUID] = [],
         createdAt: Date = Date(),
         updatedAt: Date = Date()
     ) {
         self.id = id
         self.name = name
+        self.adminId = adminId ?? members.first?.id ?? UUID()
         self.members = members
         self.expenses = expenses
         self.deletedExpenseIds = deletedExpenseIds
+        self.leftMemberIds = leftMemberIds
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -105,12 +111,38 @@ struct ExpenseGroup: Codable, Equatable, Identifiable, Hashable {
         members = try container.decode([GroupMember].self, forKey: .members)
         expenses = try container.decode([Expense].self, forKey: .expenses)
         deletedExpenseIds = try container.decodeIfPresent([UUID].self, forKey: .deletedExpenseIds) ?? []
+        leftMemberIds = try container.decodeIfPresent([UUID].self, forKey: .leftMemberIds) ?? []
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        adminId = try container.decodeIfPresent(UUID.self, forKey: .adminId) ?? members.first?.id ?? UUID()
     }
 
     mutating func touch() {
         updatedAt = Date()
+    }
+
+    var activeMembers: [GroupMember] {
+        members.filter { !leftMemberIds.contains($0.id) }
+    }
+
+    var formerMembers: [GroupMember] {
+        members.filter { leftMemberIds.contains($0.id) }
+    }
+
+    func isAdmin(_ profileId: UUID) -> Bool {
+        adminId == profileId
+    }
+
+    func isActiveMember(_ profileId: UUID) -> Bool {
+        activeMembers.contains { $0.id == profileId }
+    }
+
+    func member(with id: UUID) -> GroupMember? {
+        members.first { $0.id == id }
+    }
+
+    var admin: GroupMember? {
+        member(with: adminId)
     }
 }
 
@@ -162,6 +194,7 @@ enum SyncMessageType: String, Codable {
     case groupUpdate
     case inviteToGroup
     case requestSync
+    case groupDeleted
 }
 
 struct SyncEnvelope: Codable {
@@ -194,4 +227,22 @@ struct GroupSnapshotPayload: Codable {
 
 struct ProfilePayload: Codable {
     let profile: PeerProfile
+}
+
+struct GroupDeletedPayload: Codable {
+    let groupId: UUID
+    let groupName: String
+    let deletedByName: String
+}
+
+struct GroupNotice: Identifiable, Equatable {
+    let id: UUID
+    let title: String
+    let message: String
+
+    init(id: UUID = UUID(), title: String, message: String) {
+        self.id = id
+        self.title = title
+        self.message = message
+    }
 }

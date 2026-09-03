@@ -37,7 +37,7 @@ struct InviteMemberView: View {
 
                 if let successName {
                     Section {
-                        Label("\(successName) ist eingeladen. Beim nächsten Treffen per Bluetooth wird die Gruppe synchronisiert.", systemImage: "checkmark.circle.fill")
+                        Label("\(successName) ist eingeladen. Ist Bluetooth verbunden, öffnet sich die Gruppe auf dem anderen iPhone.", systemImage: "checkmark.circle.fill")
                             .foregroundStyle(.green)
                     }
                 }
@@ -50,7 +50,7 @@ struct InviteMemberView: View {
                 }
 
                 Section {
-                    Text("Die andere Person zeigt ihren Code unter Profil. Nach dem Scannen bleibt sie Mitglied, sobald ihr euch wieder in der Nähe seid.")
+                    Text("Die andere Person zeigt ihren Code unter Profil. Nach dem Scannen öffnet sich die Gruppe bei ihr automatisch — sobald ihr per Bluetooth verbunden seid.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

@@ -3,9 +3,10 @@ import SwiftUI
 struct GroupsListView: View {
     @EnvironmentObject private var groupStore: GroupStore
     @State private var showingCreateGroup = false
+    @State private var path = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Group {
                 if groupStore.groups.isEmpty {
                     ContentUnavailableView {
@@ -24,15 +25,29 @@ struct GroupsListView: View {
                     }
                 } else {
                     List {
-                        ForEach(groupStore.groups) { group in
-                            NavigationLink(value: group.id) {
-                                GroupRowView(group: group)
+                        if !groupStore.activeGroups.isEmpty {
+                            Section {
+                                ForEach(groupStore.activeGroups) { group in
+                                    NavigationLink(value: group.id) {
+                                        GroupRowView(group: group)
+                                    }
+                                }
                             }
                         }
-                        .onDelete { offsets in
-                            let ids = offsets.map { groupStore.groups[$0].id }
-                            for id in ids {
-                                groupStore.deleteGroup(id)
+
+                        if !groupStore.archivedGroups.isEmpty {
+                            Section("Archiv") {
+                                ForEach(groupStore.archivedGroups) { group in
+                                    NavigationLink(value: group.id) {
+                                        GroupRowView(group: group, isArchived: true)
+                                    }
+                                }
+                                .onDelete { offsets in
+                                    let ids = offsets.map { groupStore.archivedGroups[$0].id }
+                                    for id in ids {
+                                        groupStore.removeFromArchive(id)
+                                    }
+                                }
                             }
                         }
                     }
@@ -61,19 +76,35 @@ struct GroupsListView: View {
             .sheet(isPresented: $showingCreateGroup) {
                 CreateGroupView()
             }
+            .onChange(of: groupStore.pendingOpenGroupId) { _, newValue in
+                guard let newValue else { return }
+                path.append(newValue)
+                groupStore.consumePendingOpenGroup()
+            }
         }
     }
 }
 
 private struct GroupRowView: View {
     let group: ExpenseGroup
+    var isArchived = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(group.name)
-                .font(.headline)
+            HStack {
+                Text(group.name)
+                    .font(.headline)
+                if isArchived {
+                    Text("Verlassen")
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(.tertiary.opacity(0.4), in: Capsule())
+                        .foregroundStyle(.secondary)
+                }
+            }
             HStack(spacing: 12) {
-                Label("\(group.members.count)", systemImage: "person.2")
+                Label("\(group.activeMembers.count)", systemImage: "person.2")
                 Label("\(group.expenses.count)", systemImage: "eurosign.circle")
             }
             .font(.caption)

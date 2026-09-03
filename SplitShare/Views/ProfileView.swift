@@ -27,6 +27,16 @@ struct ProfileView: View {
                     IdentityQRCodeView(payload: peerService.identityPayload)
                         .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets())
+
+                    if peerService.connectedPeers.isEmpty {
+                        Text("Wenn dich jemand einlädt, öffnet sich die Gruppe automatisch. Bluetooth muss an sein.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Label("Warten auf Sync… Sobald die Einladung ankommt, öffnet sich die Gruppe.", systemImage: "dot.radiowaves.left.and.right")
+                            .font(.footnote)
+                            .foregroundStyle(.teal)
+                    }
                 }
 
                 Section("Dein Profil") {

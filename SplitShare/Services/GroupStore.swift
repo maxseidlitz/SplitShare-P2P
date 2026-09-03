@@ -5,16 +5,32 @@ import MultipeerConnectivity
 @MainActor
 final class GroupStore: ObservableObject {
     @Published private(set) var groups: [ExpenseGroup] = []
+    @Published private(set) var archivedGroupIds: Set<UUID> = []
+    @Published var pendingOpenGroupId: UUID?
+    @Published var presentedNotice: GroupNotice?
 
     private weak var peerService: MultipeerService?
     private let storageURL: URL
     private var profileIdByDeviceId: [String: UUID] = [:]
     private var deletedGroupIds: Set<UUID> = []
+    private var noticeQueue: [GroupNotice] = []
 
     init() {
         let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         storageURL = directory.appendingPathComponent("groups.json")
         load()
+    }
+
+    var activeGroups: [ExpenseGroup] {
+        groups.filter { !archivedGroupIds.contains($0.id) }
+    }
+
+    var archivedGroups: [ExpenseGroup] {
+        groups.filter { archivedGroupIds.contains($0.id) }
+    }
+
+    func isArchived(_ groupId: UUID) -> Bool {
+        archivedGroupIds.contains(groupId)
     }
 
     func attach(peerService: MultipeerService) {
@@ -43,14 +59,16 @@ final class GroupStore: ObservableObject {
             peerDeviceId: peerService.deviceId
         )
 
-        let group = ExpenseGroup(name: trimmed, members: [selfMember])
+        let group = ExpenseGroup(name: trimmed, adminId: selfMember.id, members: [selfMember])
         groups.append(group)
         persist()
         refreshTrustedDeviceIds()
+        pendingOpenGroupId = group.id
     }
 
     func addExpense(to groupId: UUID, expense: Expense) {
         guard let index = groups.firstIndex(where: { $0.id == groupId }) else { return }
+        guard !archivedGroupIds.contains(groupId) else { return }
         groups[index].expenses.append(expense)
         groups[index].expenses.sort { $0.date > $1.date }
         groups[index].touch()
@@ -61,6 +79,7 @@ final class GroupStore: ObservableObject {
     func updateExpense(in groupId: UUID, expense: Expense) {
         guard let groupIndex = groups.firstIndex(where: { $0.id == groupId }),
               let expenseIndex = groups[groupIndex].expenses.firstIndex(where: { $0.id == expense.id }) else { return }
+        guard !archivedGroupIds.contains(groupId) else { return }
         groups[groupIndex].expenses[expenseIndex] = expense
         groups[groupIndex].expenses.sort { $0.date > $1.date }
         groups[groupIndex].touch()
@@ -70,6 +89,7 @@ final class GroupStore: ObservableObject {
 
     func deleteExpense(groupId: UUID, expenseId: UUID) {
         guard let index = groups.firstIndex(where: { $0.id == groupId }) else { return }
+        guard !archivedGroupIds.contains(groupId) else { return }
         groups[index].expenses.removeAll { $0.id == expenseId }
         if !groups[index].deletedExpenseIds.contains(expenseId) {
             groups[index].deletedExpenseIds.append(expenseId)
@@ -79,11 +99,117 @@ final class GroupStore: ObservableObject {
         broadcastGroupUpdate(groups[index])
     }
 
-    func deleteGroup(_ groupId: UUID) {
-        groups.removeAll { $0.id == groupId }
-        deletedGroupIds.insert(groupId)
+    @discardableResult
+    func markMyDebtsSettled(in groupId: UUID) -> String? {
+        guard let peerService, let group = group(with: groupId) else { return "Gruppe nicht gefunden." }
+        guard !archivedGroupIds.contains(groupId) else { return "Archivierte Gruppen kannst du nicht ändern." }
+        guard group.isActiveMember(peerService.profile.id) else { return "Du bist kein aktives Mitglied." }
+
+        let myId = peerService.profile.id
+        let settlements = BalanceCalculator.simplifiedSettlements(for: group).filter { $0.from.id == myId }
+        guard !settlements.isEmpty else { return "Du hast keine offenen Schulden." }
+
+        let amount = settlements.reduce(Decimal.zero) { $0 + $1.amount }
+        let splits = settlements.map { ExpenseSplit(memberId: $0.to.id, amount: $0.amount) }
+        let expense = Expense(
+            title: "Ausgleich",
+            amount: amount,
+            payerId: myId,
+            splits: splits
+        )
+        addExpense(to: groupId, expense: expense)
+        return nil
+    }
+
+    func leaveBlockReason(for groupId: UUID) -> String? {
+        guard let peerService, let group = group(with: groupId) else { return "Gruppe nicht gefunden." }
+        let myId = peerService.profile.id
+        guard group.isActiveMember(myId) else { return "Du bist kein aktives Mitglied." }
+        if BalanceCalculator.owesMoney(myId, in: group) {
+            let amount = -BalanceCalculator.netBalance(for: myId, in: group)
+            let formatted = amount.formatted(.currency(code: Locale.current.currency?.identifier ?? "EUR"))
+            return "Du kannst die Gruppe nicht verlassen, solange du noch \(formatted) schuldest. Markiere deine Schulden unter Salden als bezahlt."
+        }
+        return nil
+    }
+
+    func deleteBlockReason(for groupId: UUID) -> String? {
+        guard let peerService, let group = group(with: groupId) else { return "Gruppe nicht gefunden." }
+        guard group.isAdmin(peerService.profile.id) || group.activeMembers.count <= 1 else {
+            return "Nur der Admin kann die Gruppe für alle löschen."
+        }
+        if BalanceCalculator.hasOpenBalances(group) {
+            return "Die Gruppe kann erst gelöscht werden, wenn alle Salden ausgeglichen sind."
+        }
+        return nil
+    }
+
+    @discardableResult
+    func leaveGroup(_ groupId: UUID, newAdminId: UUID? = nil) -> String? {
+        guard let peerService, var group = group(with: groupId) else { return "Gruppe nicht gefunden." }
+        let myId = peerService.profile.id
+        guard group.isActiveMember(myId) else { return "Du bist kein aktives Mitglied." }
+        if let reason = leaveBlockReason(for: groupId) { return reason }
+
+        let remaining = group.activeMembers.filter { $0.id != myId }
+        if remaining.isEmpty {
+            if !group.leftMemberIds.contains(myId) {
+                group.leftMemberIds.append(myId)
+            }
+            group.touch()
+            upsert(group)
+            archiveLocally(groupId)
+            persist()
+            refreshTrustedDeviceIds()
+            return nil
+        }
+
+        if group.isAdmin(myId) {
+            guard let newAdminId, remaining.contains(where: { $0.id == newAdminId }) else {
+                return "Bitte wähle ein Mitglied, das Admin wird."
+            }
+            group.adminId = newAdminId
+        }
+
+        if !group.leftMemberIds.contains(myId) {
+            group.leftMemberIds.append(myId)
+        }
+        group.touch()
+        upsert(group)
+        persist()
+        broadcastGroupUpdate(group)
+        archiveLocally(groupId)
         persist()
         refreshTrustedDeviceIds()
+        return nil
+    }
+
+    @discardableResult
+    func deleteGroupForEveryone(_ groupId: UUID) -> String? {
+        guard let peerService, let group = group(with: groupId) else { return "Gruppe nicht gefunden." }
+        if let reason = deleteBlockReason(for: groupId) { return reason }
+
+        broadcastGroupDeleted(group, deletedByName: peerService.profile.displayName)
+        removeLocally(groupId, rememberDeletion: true)
+        persist()
+        refreshTrustedDeviceIds()
+        return nil
+    }
+
+    func removeFromArchive(_ groupId: UUID) {
+        guard archivedGroupIds.contains(groupId) else { return }
+        removeLocally(groupId, rememberDeletion: true)
+        persist()
+        refreshTrustedDeviceIds()
+    }
+
+    func consumePendingOpenGroup() {
+        pendingOpenGroupId = nil
+    }
+
+    func consumePresentedNotice() {
+        presentedNotice = nil
+        presentNextNotice()
     }
 
     func applyOwnDisplayName() {
@@ -100,7 +226,7 @@ final class GroupStore: ObservableObject {
         }
         guard !changedGroupIds.isEmpty else { return }
         persist()
-        for id in changedGroupIds {
+        for id in changedGroupIds where !archivedGroupIds.contains(id) {
             if let group = group(with: id) {
                 broadcastGroupUpdate(group)
             }
@@ -109,11 +235,23 @@ final class GroupStore: ObservableObject {
 
     func inviteMember(to groupId: UUID, member: GroupMember) {
         guard let index = groups.firstIndex(where: { $0.id == groupId }) else { return }
-        guard !groups[index].members.contains(where: {
-            $0.id == member.id || ($0.peerDeviceId != nil && $0.peerDeviceId == member.peerDeviceId)
-        }) else { return }
+        guard !archivedGroupIds.contains(groupId) else { return }
 
-        groups[index].members.append(member)
+        if groups[index].leftMemberIds.contains(member.id) {
+            groups[index].leftMemberIds.removeAll { $0 == member.id }
+        }
+
+        if let existing = groups[index].members.firstIndex(where: {
+            $0.id == member.id || ($0.peerDeviceId != nil && $0.peerDeviceId == member.peerDeviceId)
+        }) {
+            groups[index].members[existing].displayName = member.displayName
+            if groups[index].members[existing].peerDeviceId == nil {
+                groups[index].members[existing].peerDeviceId = member.peerDeviceId
+            }
+        } else {
+            groups[index].members.append(member)
+        }
+
         groups[index].touch()
         persist()
         refreshTrustedDeviceIds()
@@ -203,12 +341,43 @@ final class GroupStore: ObservableObject {
         case .inviteToGroup:
             if let payload = try? JSONDecoder().decode(GroupInvitePayload.self, from: envelope.payload),
                shouldAccept(payload.group) {
+                let wasNew = group(with: payload.group.id) == nil
+                let wasArchived = archivedGroupIds.contains(payload.group.id)
                 mergeGroup(payload.group)
+                archivedGroupIds.remove(payload.group.id)
+                persist()
                 shareMembership(with: peer, deviceId: envelope.senderDeviceId)
+                if wasNew || wasArchived {
+                    pendingOpenGroupId = payload.group.id
+                }
             }
         case .requestSync:
             shareMembership(with: peer, deviceId: envelope.senderDeviceId)
+        case .groupDeleted:
+            if let payload = try? JSONDecoder().decode(GroupDeletedPayload.self, from: envelope.payload) {
+                handleRemoteDeletion(payload)
+            }
         }
+    }
+
+    private func handleRemoteDeletion(_ payload: GroupDeletedPayload) {
+        guard groups.contains(where: { $0.id == payload.groupId }) || archivedGroupIds.contains(payload.groupId) else {
+            deletedGroupIds.insert(payload.groupId)
+            persist()
+            return
+        }
+        let myName = peerService?.profile.displayName
+        if myName != payload.deletedByName {
+            enqueueNotice(
+                GroupNotice(
+                    title: "Gruppe gelöscht",
+                    message: "\(payload.deletedByName) hat die Gruppe „\(payload.groupName)“ gelöscht."
+                )
+            )
+        }
+        removeLocally(payload.groupId, rememberDeletion: true)
+        persist()
+        refreshTrustedDeviceIds()
     }
 
     private func shareMembership(with peer: MCPeerID, deviceId: String? = nil) {
@@ -241,23 +410,20 @@ final class GroupStore: ObservableObject {
         if deletedGroupIds.contains(incoming.id) {
             return false
         }
-        if groups.contains(where: { $0.id == incoming.id }) {
+        if let myId = peerService?.profile.id, incoming.isActiveMember(myId) {
             return true
         }
-        guard let myId = peerService?.profile.id else { return false }
-        return incoming.members.contains(where: { $0.id == myId })
+        if archivedGroupIds.contains(incoming.id) {
+            return false
+        }
+        return groups.contains(where: { $0.id == incoming.id })
     }
 
     private func broadcastGroupUpdate(_ group: ExpenseGroup) {
         guard let peerService,
               let payload = try? JSONEncoder().encode(GroupUpdatePayload(group: group)) else { return }
 
-        let targets = peerService.connectedPeers.filter { peer in
-            guard let deviceId = peerService.deviceId(for: peer) else { return false }
-            return group.members.contains {
-                $0.peerDeviceId == deviceId || $0.id == profileIdByDeviceId[deviceId]
-            }
-        }
+        let targets = connectedTargets(for: group)
         guard !targets.isEmpty else { return }
 
         let envelope = SyncEnvelope(
@@ -266,6 +432,33 @@ final class GroupStore: ObservableObject {
             payload: payload
         )
         peerService.send(envelope, to: targets)
+    }
+
+    private func broadcastGroupDeleted(_ group: ExpenseGroup, deletedByName: String) {
+        guard let peerService,
+              let payload = try? JSONEncoder().encode(
+                GroupDeletedPayload(groupId: group.id, groupName: group.name, deletedByName: deletedByName)
+              ) else { return }
+
+        let targets = connectedTargets(for: group)
+        guard !targets.isEmpty else { return }
+
+        let envelope = SyncEnvelope(
+            senderDeviceId: peerService.deviceId,
+            type: .groupDeleted,
+            payload: payload
+        )
+        peerService.send(envelope, to: targets)
+    }
+
+    private func connectedTargets(for group: ExpenseGroup) -> [MCPeerID] {
+        guard let peerService else { return [] }
+        return peerService.connectedPeers.filter { peer in
+            guard let deviceId = peerService.deviceId(for: peer) else { return false }
+            return group.members.contains {
+                $0.peerDeviceId == deviceId || $0.id == profileIdByDeviceId[deviceId]
+            }
+        }
     }
 
     private func mergeProfileMember(_ profile: PeerProfile, peerDeviceId: String, peerName: String) {
@@ -302,15 +495,30 @@ final class GroupStore: ObservableObject {
     private func mergeGroup(_ incoming: ExpenseGroup) {
         guard !deletedGroupIds.contains(incoming.id) else { return }
 
+        let wasArchived = archivedGroupIds.contains(incoming.id)
+        if wasArchived {
+            guard let myId = peerService?.profile.id, incoming.isActiveMember(myId) else { return }
+            archivedGroupIds.remove(incoming.id)
+        }
+
         if let index = groups.firstIndex(where: { $0.id == incoming.id }) {
             let before = groups[index]
             let merged = mergeMembersAndExpenses(local: before, remote: incoming)
             groups[index] = merged
             if merged != before {
-                broadcastGroupUpdate(merged)
+                enqueueMembershipNotices(before: before, after: merged)
+                if !archivedGroupIds.contains(merged.id) {
+                    broadcastGroupUpdate(merged)
+                }
+            }
+            if wasArchived, let myId = peerService?.profile.id, merged.isActiveMember(myId) {
+                pendingOpenGroupId = merged.id
             }
         } else {
             groups.append(incoming)
+            if let myId = peerService?.profile.id, incoming.isActiveMember(myId) {
+                pendingOpenGroupId = incoming.id
+            }
         }
         groups.sort { $0.updatedAt > $1.updatedAt }
         persist()
@@ -319,30 +527,38 @@ final class GroupStore: ObservableObject {
 
     private func mergeMembersAndExpenses(local: ExpenseGroup, remote: ExpenseGroup) -> ExpenseGroup {
         var merged = local.updatedAt >= remote.updatedAt ? local : remote
+        let newer = local.updatedAt >= remote.updatedAt ? local : remote
 
         let olderMembers = local.updatedAt >= remote.updatedAt ? remote.members : local.members
         let newerMembers = local.updatedAt >= remote.updatedAt ? local.members : remote.members
         let membersById = Dictionary(
             (olderMembers + newerMembers).map { ($0.id, $0) },
-            uniquingKeysWith: { older, newer in
-                var merged = newer
-                if merged.peerDeviceId == nil {
-                    merged.peerDeviceId = older.peerDeviceId
+            uniquingKeysWith: { olderMember, newerMember in
+                var mergedMember = newerMember
+                if mergedMember.peerDeviceId == nil {
+                    mergedMember.peerDeviceId = olderMember.peerDeviceId
                 }
-                return merged
+                return mergedMember
             }
         )
-        merged.members = membersById.values.sorted {
-            let nameOrder = $0.displayName.localizedCaseInsensitiveCompare($1.displayName)
+        merged.members = membersById.values.sorted { lhs, rhs in
+            let nameOrder = lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName)
             if nameOrder != .orderedSame { return nameOrder == .orderedAscending }
-            return $0.id.uuidString < $1.id.uuidString
+            return lhs.id.uuidString < rhs.id.uuidString
         }
+
+        let tombstones = Set(local.leftMemberIds + remote.leftMemberIds)
+        let revived = Set(newer.activeMembers.map(\.id))
+        merged.leftMemberIds = tombstones.subtracting(revived).sorted { lhs, rhs in
+            lhs.uuidString < rhs.uuidString
+        }
+        merged.adminId = newer.adminId
 
         let deleted = Set(local.deletedExpenseIds + remote.deletedExpenseIds)
         var expensesById = Dictionary(
             local.expenses.map { ($0.id, $0) },
-            uniquingKeysWith: { current, incoming in
-                incoming.updatedAt >= current.updatedAt ? incoming : current
+            uniquingKeysWith: { current, incomingExpense in
+                incomingExpense.updatedAt >= current.updatedAt ? incomingExpense : current
             }
         )
         for expense in remote.expenses {
@@ -359,17 +575,87 @@ final class GroupStore: ObservableObject {
             expensesById.removeValue(forKey: id)
         }
 
-        merged.deletedExpenseIds = deleted.sorted { $0.uuidString < $1.uuidString }
-        merged.expenses = expensesById.values.sorted {
-            if $0.date != $1.date { return $0.date > $1.date }
-            return $0.id.uuidString < $1.id.uuidString
+        merged.deletedExpenseIds = deleted.sorted { lhs, rhs in
+            lhs.uuidString < rhs.uuidString
+        }
+        merged.expenses = Array(expensesById.values).sorted { lhs, rhs in
+            if lhs.date != rhs.date { return lhs.date > rhs.date }
+            return lhs.id.uuidString < rhs.id.uuidString
         }
         merged.updatedAt = max(local.updatedAt, remote.updatedAt)
         return merged
     }
 
+    private func enqueueMembershipNotices(before: ExpenseGroup, after: ExpenseGroup) {
+        guard let myId = peerService?.profile.id else { return }
+        let departed = Set(before.activeMembers.map(\.id))
+            .subtracting(after.activeMembers.map(\.id))
+            .subtracting([myId])
+
+        for memberId in departed {
+            let name = after.member(with: memberId)?.displayName
+                ?? before.member(with: memberId)?.displayName
+                ?? "Jemand"
+            var message = "\(name) hat die Gruppe „\(after.name)“ verlassen."
+            if before.adminId == memberId, after.adminId != memberId, let newAdmin = after.admin {
+                message += " \(newAdmin.displayName) ist jetzt Admin."
+            }
+            enqueueNotice(GroupNotice(title: "Mitglied verlassen", message: message))
+        }
+
+        if before.adminId != after.adminId,
+           departed.isEmpty,
+           after.adminId != myId,
+           let newAdmin = after.admin {
+            enqueueNotice(
+                GroupNotice(
+                    title: "Neuer Admin",
+                    message: "\(newAdmin.displayName) ist jetzt Admin von „\(after.name)“."
+                )
+            )
+        }
+    }
+
+    private func enqueueNotice(_ notice: GroupNotice) {
+        if presentedNotice == nil {
+            presentedNotice = notice
+        } else {
+            noticeQueue.append(notice)
+        }
+    }
+
+    private func presentNextNotice() {
+        guard presentedNotice == nil, !noticeQueue.isEmpty else { return }
+        presentedNotice = noticeQueue.removeFirst()
+    }
+
+    private func upsert(_ group: ExpenseGroup) {
+        if let index = groups.firstIndex(where: { $0.id == group.id }) {
+            groups[index] = group
+        } else {
+            groups.append(group)
+        }
+        groups.sort { $0.updatedAt > $1.updatedAt }
+    }
+
+    private func archiveLocally(_ groupId: UUID) {
+        archivedGroupIds.insert(groupId)
+    }
+
+    private func removeLocally(_ groupId: UUID, rememberDeletion: Bool) {
+        groups.removeAll { $0.id == groupId }
+        archivedGroupIds.remove(groupId)
+        if rememberDeletion {
+            deletedGroupIds.insert(groupId)
+        }
+    }
+
     private func refreshTrustedDeviceIds() {
-        let ids = Set(groups.flatMap { $0.members.compactMap(\.peerDeviceId) })
+        let ids = Set(
+            groups
+                .filter { !archivedGroupIds.contains($0.id) }
+                .flatMap { $0.activeMembers.compactMap(\.peerDeviceId) }
+        )
         peerService?.setTrustedDeviceIds(ids)
     }
 
@@ -381,6 +667,7 @@ final class GroupStore: ObservableObject {
         if let persisted = try? JSONDecoder().decode(PersistedStore.self, from: data) {
             groups = persisted.groups
             deletedGroupIds = Set(persisted.deletedGroupIds)
+            archivedGroupIds = Set(persisted.archivedGroupIds ?? [])
             return
         }
         if let decoded = try? JSONDecoder().decode([ExpenseGroup].self, from: data) {
@@ -389,7 +676,11 @@ final class GroupStore: ObservableObject {
     }
 
     private func persist() {
-        let persisted = PersistedStore(groups: groups, deletedGroupIds: Array(deletedGroupIds))
+        let persisted = PersistedStore(
+            groups: groups,
+            deletedGroupIds: Array(deletedGroupIds),
+            archivedGroupIds: Array(archivedGroupIds)
+        )
         guard let data = try? JSONEncoder().encode(persisted) else { return }
         try? data.write(to: storageURL, options: [.atomic])
     }
@@ -398,4 +689,5 @@ final class GroupStore: ObservableObject {
 private struct PersistedStore: Codable {
     var groups: [ExpenseGroup]
     var deletedGroupIds: [UUID]
+    var archivedGroupIds: [UUID]?
 }

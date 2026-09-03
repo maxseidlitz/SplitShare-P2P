@@ -109,16 +109,13 @@ function initSyncDemo() {
   if (!demo) return;
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  if (reduceMotion.matches) {
-    demo.classList.remove("is-paused");
-    return;
-  }
+  if (reduceMotion.matches) return;
 
   const observer = new IntersectionObserver(
     ([entry]) => {
       demo.classList.toggle("is-paused", !entry.isIntersecting);
     },
-    { threshold: 0.35 }
+    { threshold: 0.15 }
   );
   observer.observe(demo);
 }

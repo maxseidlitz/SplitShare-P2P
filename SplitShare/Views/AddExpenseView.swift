@@ -48,6 +48,15 @@ struct AddExpenseView: View {
         }
     }
 
+    private var selectableMembers: [GroupMember] {
+        if isEditing {
+            let involved = Set((existingExpense?.splits.map(\.memberId) ?? []) + [existingExpense?.payerId].compactMap { $0 })
+            var seen = Set<UUID>()
+            return (group.activeMembers + group.members.filter { involved.contains($0.id) }).filter { seen.insert($0.id).inserted }
+        }
+        return group.activeMembers
+    }
+
     private var amount: Decimal? {
         Decimal(string: amountText.replacingOccurrences(of: ",", with: "."))
     }
@@ -86,10 +95,10 @@ struct AddExpenseView: View {
 
                 Section("Bezahlt von") {
                     Picker("Bezahlt von", selection: Binding(
-                        get: { payerId ?? group.members.first?.id ?? UUID() },
+                        get: { payerId ?? selectableMembers.first?.id ?? UUID() },
                         set: { payerId = $0 }
                     )) {
-                        ForEach(group.members) { member in
+                        ForEach(selectableMembers) { member in
                             Text(member.displayName).tag(member.id)
                         }
                     }
@@ -111,9 +120,9 @@ struct AddExpenseView: View {
 
                     HStack {
                         Button("Alle") {
-                            selectedMemberIds = Set(group.members.map(\.id))
+                            selectedMemberIds = Set(selectableMembers.map(\.id))
                         }
-                        .disabled(selectedMemberIds.count == group.members.count)
+                        .disabled(selectedMemberIds.count == selectableMembers.count)
 
                         Spacer()
 
@@ -124,7 +133,7 @@ struct AddExpenseView: View {
                     }
                     .buttonStyle(.borderless)
 
-                    ForEach(group.members) { member in
+                    ForEach(selectableMembers) { member in
                         Toggle(isOn: Binding(
                             get: { selectedMemberIds.contains(member.id) },
                             set: { isOn in
@@ -182,8 +191,8 @@ struct AddExpenseView: View {
             }
             .onAppear {
                 guard !isEditing else { return }
-                payerId = group.members.first(where: { $0.id == peerService.profile.id })?.id ?? group.members.first?.id
-                selectedMemberIds = Set(group.members.map(\.id))
+                payerId = group.members.first(where: { $0.id == peerService.profile.id })?.id ?? selectableMembers.first?.id
+                selectedMemberIds = Set(selectableMembers.map(\.id))
             }
         }
     }
