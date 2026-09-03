@@ -3,11 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SplitShare — Gemeinsame Ausgaben. Ohne Internet.</title>
+    <title>SplitShare — Muss nie online sein</title>
     <meta
       name="description"
-      content="SplitShare ist die Offline-Alternative zu Splitwise. Gruppen, Rechnungen und Salden synchronisieren per Bluetooth — direkt von iPhone zu iPhone."
+      content="SplitShare muss nie online sein. Gemeinsame Ausgaben bleiben auf euren iPhones — synchronisiert per Bluetooth. Keine Cloud, kein Account, maximale Privatsphäre."
     />
+    <meta property="og:title" content="SplitShare — Muss nie online sein" />
+    <meta
+      property="og:description"
+      content="Gemeinsame Ausgaben. Keine Cloud. Kein Internet. Daten bleiben auf dem iPhone."
+    />
+    <meta property="og:image" content="/assets/logo.png" />
     <link rel="icon" type="image/png" href="/assets/favicon.png" />
     <link rel="apple-touch-icon" href="/assets/favicon.png" />
     <link rel="stylesheet" href="/css/styles.css" />
@@ -17,20 +23,24 @@
 
     <header class="nav">
       <a class="brand" href="#top">
-        <img src="/assets/logo.png" alt="" width="36" height="36" />
+        <img src="/assets/logo.svg" alt="" width="40" height="40" />
         <span>SplitShare</span>
       </a>
-      <a class="nav-cta" href="#waitlist">Waitlist</a>
+      <nav class="nav-links">
+        <a href="#privacy">Privatsphäre</a>
+        <a class="nav-cta" href="#waitlist">Waitlist</a>
+      </nav>
     </header>
 
     <main id="top">
       <section class="hero">
         <div class="hero-copy">
           <p class="eyebrow">Bald auf dem iPhone</p>
-          <h1>Gemeinsame Ausgaben.<br /><em>Ohne Netz. Ohne Cloud.</em></h1>
+          <h1>Gemeinsame Ausgaben.<br /><em>Muss nie online sein.</em></h1>
           <p class="lead">
-            SplitShare ist Splitwise, das nie online sein muss. Gruppen, Rechnungen
-            und Salden wandern per Bluetooth direkt von iPhone zu iPhone.
+            SplitShare läuft komplett auf euren iPhones. Gruppen, Rechnungen und
+            Salden wandern per Bluetooth von Gerät zu Gerät. Keine Cloud. Kein
+            Account. Maximale Privatsphäre — auch im Flugmodus.
           </p>
 
           <div class="meter" id="meter" aria-live="polite">
@@ -71,7 +81,13 @@
                 <span>SplitShare</span>
               </div>
               <div class="app-screen">
-                <p class="app-title">SplitShare</p>
+                <div class="app-header">
+                  <img src="/assets/logo.svg" alt="" width="36" height="36" />
+                  <div>
+                    <p class="app-title">SplitShare</p>
+                    <p class="app-offline">Offline · Bluetooth</p>
+                  </div>
+                </div>
                 <article class="group-card">
                   <strong>Urlaub Italien</strong>
                   <span>4 Mitglieder · 8 Ausgaben</span>
@@ -93,6 +109,32 @@
             </div>
           </div>
         </div>
+      </section>
+
+      <section class="privacy" id="privacy">
+        <div class="privacy-brand">
+          <img src="/assets/logo.svg" alt="SplitShare Logo" width="88" height="88" />
+          <p class="eyebrow">Privatsphäre</p>
+          <h2>Deine Daten verlassen das Gerät nicht.</h2>
+          <p>
+            Es gibt keinen Server, den jemand abfragen könnte. Die Gruppe existiert
+            nur auf den iPhones, die ihr selbst zusammenhaltet.
+          </p>
+        </div>
+        <ul>
+          <li>
+            <strong>Nie online nötig</strong>
+            <span>Flugmodus, Berghütte, Festivalgelände. SplitShare synct per Bluetooth, sobald ihr nah beieinander seid.</span>
+          </li>
+          <li>
+            <strong>Keine Cloud</strong>
+            <span>Kein Account, keine Nutzerdatenbank, keine Synchronisation über das Netz. Nur Gerät zu Gerät.</span>
+          </li>
+          <li>
+            <strong>Maximale Privatsphäre</strong>
+            <span>Ausgaben, Namen, Salden — alles bleibt lokal. Wer nicht in der Gruppe ist, sieht nichts.</span>
+          </li>
+        </ul>
       </section>
 
       <section class="features" id="features">
@@ -132,7 +174,95 @@
 
       <section class="steps" id="how">
         <p class="eyebrow">So funktioniert’s</p>
-        <h2>Drei Schritte. Kein Account im Netz.</h2>
+        <h2>Drei Schritte. Ohne Internet.</h2>
+
+        <div class="sync-demo is-paused" id="sync-demo">
+          <p class="sr-only">
+            Zwei iPhones synchronisieren eine Ausgabe per Bluetooth — ohne Internet.
+            Max trägt Pizza ein, die Geräte rücken zusammen, Lea sieht denselben Stand.
+          </p>
+          <div class="sync-captions" aria-hidden="true">
+            <span class="sync-caption cap-1">Max trägt ein.</span>
+            <span class="sync-caption cap-2">Bluetooth. Kein Internet.</span>
+            <span class="sync-caption cap-3">Lea hat denselben Stand.</span>
+          </div>
+          <div class="sync-stage" aria-hidden="true">
+            <div class="phone phone-sm phone-a">
+              <div class="phone-inner">
+                <div class="island"></div>
+                <div class="status">
+                  <span>9:41</span>
+                  <span>Max</span>
+                </div>
+                <div class="app-screen">
+                  <div class="app-header">
+                    <img src="/assets/logo.svg" alt="" width="24" height="24" />
+                    <div>
+                      <p class="app-title">Festival-Crew</p>
+                      <p class="app-offline">Offline · Bluetooth</p>
+                    </div>
+                  </div>
+                  <article class="group-card accent">
+                    <strong>Pizza</strong>
+                    <span>24,00 € · Max</span>
+                  </article>
+                  <p class="sync-badge">Synchronisiert</p>
+                </div>
+                <div class="tabbar">
+                  <span class="active">Gruppen</span>
+                  <span>In der Nähe</span>
+                  <span>Profil</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="sync-beam">
+              <span class="sync-wave w1"></span>
+              <span class="sync-wave w2"></span>
+              <span class="sync-wave w3"></span>
+              <article class="fly-card">
+                <strong>Pizza</strong>
+                <span>24,00 €</span>
+              </article>
+            </div>
+
+            <div class="phone phone-sm phone-b">
+              <div class="phone-inner">
+                <div class="island"></div>
+                <div class="status">
+                  <span>9:41</span>
+                  <span>Lea</span>
+                </div>
+                <div class="app-screen">
+                  <div class="app-header">
+                    <img src="/assets/logo.svg" alt="" width="24" height="24" />
+                    <div>
+                      <p class="app-title">Festival-Crew</p>
+                      <p class="app-offline">Offline · Bluetooth</p>
+                    </div>
+                  </div>
+                  <div class="sync-slot">
+                    <article class="group-card wait-card">
+                      <strong>Wartet auf Sync</strong>
+                      <span>Keine neuen Ausgaben</span>
+                    </article>
+                    <article class="group-card accent arrive-card">
+                      <strong>Pizza</strong>
+                      <span>24,00 € · Max</span>
+                    </article>
+                  </div>
+                  <p class="sync-badge">Synchronisiert</p>
+                </div>
+                <div class="tabbar">
+                  <span class="active">Gruppen</span>
+                  <span>In der Nähe</span>
+                  <span>Profil</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <ol>
           <li>
             <strong>Gruppe anlegen</strong>
@@ -150,7 +280,7 @@
       </section>
 
       <section class="cta" id="waitlist">
-        <img class="cta-logo" src="/assets/logo.png" alt="SplitShare Logo" width="72" height="72" />
+        <img class="cta-logo" src="/assets/logo.svg" alt="SplitShare Logo" width="72" height="72" />
         <h2>Sei dabei, wenn wir live gehen.</h2>
         <p>Die ersten auf der Liste bekommen SplitShare zuerst aufs iPhone.</p>
         <form class="waitlist" id="waitlist-form-bottom" novalidate>
@@ -172,10 +302,10 @@
 
     <footer>
       <div>
-        <img src="/assets/logo.png" alt="" width="28" height="28" />
+        <img src="/assets/logo.svg" alt="" width="28" height="28" />
         <strong>SplitShare</strong>
       </div>
-      <p>Peer-to-Peer. Privat. Offline.</p>
+      <p>Nie online. Keine Cloud. Maximale Privatsphäre.</p>
     </footer>
 
     <script src="/js/app.js"></script>

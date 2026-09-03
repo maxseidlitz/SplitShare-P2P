@@ -103,3 +103,24 @@ document.querySelectorAll(".waitlist").forEach((form) => {
 
 refreshCount(false);
 setInterval(() => refreshCount(true), 8000);
+
+function initSyncDemo() {
+  const demo = document.getElementById("sync-demo");
+  if (!demo) return;
+
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  if (reduceMotion.matches) {
+    demo.classList.remove("is-paused");
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      demo.classList.toggle("is-paused", !entry.isIntersecting);
+    },
+    { threshold: 0.35 }
+  );
+  observer.observe(demo);
+}
+
+initSyncDemo();
