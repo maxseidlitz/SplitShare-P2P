@@ -1,8 +1,6 @@
 import SwiftUI
 
 struct ContentView: View {
-    @EnvironmentObject private var peerService: MultipeerService
-
     var body: some View {
         TabView {
             GroupsListView()
@@ -21,6 +19,22 @@ struct ContentView: View {
                 }
         }
         .tint(.teal)
+    }
+}
+
+struct AppLogo: View {
+    var size: CGFloat = 84
+    var cornerRadius: CGFloat = 20
+
+    var body: some View {
+        Image("Logo")
+            .renderingMode(.original)
+            .resizable()
+            .interpolation(.high)
+            .aspectRatio(contentMode: .fit)
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .accessibilityHidden(true)
     }
 }
 

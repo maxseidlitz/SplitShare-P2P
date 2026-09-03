@@ -5,6 +5,10 @@ struct NearbyPeersView: View {
     @EnvironmentObject private var peerService: MultipeerService
     @EnvironmentObject private var groupStore: GroupStore
 
+    private var trustedDiscovered: [MCPeerID] {
+        peerService.discoveredPeers.filter { peerService.isTrusted($0) }
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -16,29 +20,29 @@ struct NearbyPeersView: View {
                         Text(peerService.isAdvertising && peerService.isBrowsing ? "Bluetooth aktiv" : "Bluetooth inaktiv")
                     }
                     if peerService.connectedPeers.isEmpty {
-                        Text("Keine verbundenen Geräte")
+                        Text("Keine eingeladenen Geräte verbunden")
                             .foregroundStyle(.secondary)
                     } else {
-                        ForEach(peerService.connectedPeers, id: \.displayName) { peer in
+                        ForEach(peerService.connectedPeers, id: \.self) { peer in
                             Label(peer.displayName, systemImage: "link.circle.fill")
                         }
                     }
                 } header: {
                     Text("Verbunden")
                 } footer: {
-                    Text("Geräte in der Nähe verbinden sich automatisch per Bluetooth/WLAN-Direct. Kein Internet nötig.")
+                    Text("Es verbinden sich nur Personen, die du per QR-Code eingeladen hast. Unbekannte in der Nähe sehen deine Gruppen nicht.")
                 }
 
-                Section("In der Nähe gefunden") {
-                    if peerService.discoveredPeers.isEmpty {
+                Section("Eingeladen in der Nähe") {
+                    if trustedDiscovered.isEmpty {
                         ContentUnavailableView {
-                            Label("Suche läuft…", systemImage: "antenna.radiowaves.left.and.right")
+                            Label("Niemand bekannt in der Nähe", systemImage: "qrcode.viewfinder")
                         } description: {
-                            Text("Öffne SplitShare auf einem anderen iPhone in der Nähe.")
+                            Text("Lade Mitglieder in der Gruppe per QR-Code ein. Danach synchronisiert Bluetooth automatisch.")
                         }
                         .listRowBackground(Color.clear)
                     } else {
-                        ForEach(peerService.discoveredPeers, id: \.displayName) { peer in
+                        ForEach(trustedDiscovered, id: \.self) { peer in
                             PeerRowView(peer: peer)
                         }
                     }
@@ -71,7 +75,7 @@ private struct PeerRowView: View {
     let peer: MCPeerID
 
     private var isConnected: Bool {
-        peerService.connectedPeers.contains { $0.displayName == peer.displayName }
+        peerService.isConnected(peer)
     }
 
     var body: some View {

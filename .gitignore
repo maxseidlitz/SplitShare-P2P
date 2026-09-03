@@ -1,4 +1,5 @@
-# Waitlist emails — never commit personal data
-website/data/waitlist.json
-website/data/*.tmp
 .DS_Store
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/

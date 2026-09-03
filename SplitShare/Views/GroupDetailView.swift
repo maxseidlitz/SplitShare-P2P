@@ -8,6 +8,7 @@ struct GroupDetailView: View {
 
     @State private var showingAddExpense = false
     @State private var showingInvite = false
+    @State private var expenseToEdit: Expense?
     @State private var selectedTab = 0
 
     private var currentGroup: ExpenseGroup {
@@ -57,6 +58,9 @@ struct GroupDetailView: View {
         .sheet(isPresented: $showingAddExpense) {
             AddExpenseView(group: currentGroup)
         }
+        .sheet(item: $expenseToEdit) { expense in
+            AddExpenseView(group: currentGroup, expense: expense)
+        }
         .sheet(isPresented: $showingInvite) {
             InviteMemberView(group: currentGroup)
         }
@@ -73,12 +77,36 @@ struct GroupDetailView: View {
             } else {
                 List {
                     ForEach(currentGroup.expenses) { expense in
-                        ExpenseRowView(expense: expense, members: currentGroup.members)
-                    }
-                    .onDelete { offsets in
-                        for index in offsets {
-                            let expense = currentGroup.expenses[index]
-                            groupStore.deleteExpense(groupId: currentGroup.id, expenseId: expense.id)
+                        Button {
+                            expenseToEdit = expense
+                        } label: {
+                            ExpenseRowView(expense: expense, members: currentGroup.members)
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                groupStore.deleteExpense(groupId: currentGroup.id, expenseId: expense.id)
+                            } label: {
+                                Label("Löschen", systemImage: "trash")
+                            }
+                            Button {
+                                expenseToEdit = expense
+                            } label: {
+                                Label("Bearbeiten", systemImage: "pencil")
+                            }
+                            .tint(.teal)
+                        }
+                        .contextMenu {
+                            Button {
+                                expenseToEdit = expense
+                            } label: {
+                                Label("Bearbeiten", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) {
+                                groupStore.deleteExpense(groupId: currentGroup.id, expenseId: expense.id)
+                            } label: {
+                                Label("Löschen", systemImage: "trash")
+                            }
                         }
                     }
                 }
@@ -121,6 +149,9 @@ private struct ExpenseRowView: View {
                 Spacer()
                 Text(expense.amount.formatted(.currency(code: Locale.current.currency?.identifier ?? "EUR")))
                     .font(.headline)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
             }
             Text("Bezahlt von \(payerName)")
                 .font(.caption)
